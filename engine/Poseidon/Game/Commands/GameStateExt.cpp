@@ -627,6 +627,8 @@ GameValue StrSize(const GameState* state, GameValuePar oper1);
 GameValue StrSub(const GameState* state, GameValuePar oper1);
 GameValue StringLoad(const GameState* state, GameValuePar oper1);
 GameValue StringPreprocess(const GameState* state, GameValuePar oper1);
+GameValue LlmRequest(const GameState* state, GameValuePar oper1);
+GameValue LlmResult(const GameState* state, GameValuePar oper1);
 GameValue LogInfo(const GameState* state, GameValuePar oper1);
 GameValue TextDebugLog(const GameState* state, GameValuePar oper1);
 GameValue TextLog(const GameState* state, GameValuePar oper1);
@@ -1158,6 +1160,8 @@ static const GameFunction* GetExtUnary(int& count)
 
         GameFunction(GameString, "loadFile", StringLoad, GameString),
         GameFunction(GameString, "preprocessFile", StringPreprocess, GameString),
+        GameFunction(GameScalar, "llmRequest", LlmRequest, GameString),
+        GameFunction(GameString, "llmResult", LlmResult, GameScalar),
 
         GameFunction(GameScalar, "playersNumber", PlayersNumber, GameSide),
 
