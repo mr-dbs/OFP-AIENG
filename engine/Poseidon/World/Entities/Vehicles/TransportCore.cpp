@@ -776,6 +776,15 @@ void Transport::AICommander(AIUnit* unit, float deltaT)
             }
         }
     }
+    else if (_moveMode != VMMFormation)
+    {
+        // LLM project fix 1 (not upstream). This unit commands the vehicle and drives it. Nobody is
+        // left to give him driving orders, and only a commander who is not the driver ever clears one
+        // (SendJoin above). So an order left by a commander who is dead or has got out would hold the
+        // driver at that spot for good: CommandPilot overrides his own subgroup's orders with it.
+        _moveMode = VMMFormation;
+        _turnMode = VTMNone;
+    }
 
     if (unit == GunnerUnit())
     {
