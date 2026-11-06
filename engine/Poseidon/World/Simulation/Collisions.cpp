@@ -3,6 +3,17 @@
 #include <Poseidon/World/Terrain/Landscape.hpp>
 #include <stdlib.h>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
+
+// LLM project fix (5 November 2026): true when a float is a finite number. It reads the bits, so it still
+// works if the build is ever made with fast-math options, under which std::isfinite may be optimised away.
+static inline bool LlmFinite(float value)
+{
+    std::uint32_t bits;
+    std::memcpy(&bits, &value, sizeof bits);
+    return (bits & 0x7f800000u) != 0x7f800000u;
+}
 #include <Poseidon/Foundation/Common/FltOpts.hpp>
 #include <Poseidon/Foundation/Containers/Array.hpp>
 #include <Poseidon/Foundation/Containers/Array2D.hpp>
@@ -877,6 +888,11 @@ void Landscape::GroundCollisionPlane(GroundCollisionBuffer& retVal, Object* with
 void Landscape::ExplosionDammageEffects(EntityAI* owner, Shot* shot, Object* directHit, Vector3Par pos, Vector3Par dir,
                                         const AmmoType* type, bool enemyDammage)
 {
+    // LLM project fix (5 November 2026): the same guard as in Landscape::ExplosionDammage, for clients.
+    if (!LlmFinite(pos.X()) || !LlmFinite(pos.Y()) || !LlmFinite(pos.Z()))
+    {
+        return;
+    }
     if (!type)
     {
         return;
@@ -1068,6 +1084,14 @@ void Landscape::ExplosionDammageEffects(EntityAI* owner, Shot* shot, Object* dir
 void Landscape::ExplosionDammage(EntityAI* owner, Shot* shot, Object* directHit, Vector3Par pos, Vector3Par dir,
                                  const AmmoType* type)
 {
+    // LLM project fix (5 November 2026): an explosion whose position is not a finite number is skipped. With
+    // such a position the shielding check in Landscape::Visible walks about 2 billion map cells for every
+    // nearby object, and the game freezes with its sound looping (dumps of 24 October and 5 November 2026).
+    if (!LlmFinite(pos.X()) || !LlmFinite(pos.Y()) || !LlmFinite(pos.Z()))
+    {
+        LOG_WARN(Physics, "Explosion at an invalid position skipped");
+        return;
+    }
     bool enemyDammage = false;
 
     AIUnit* ownerUnit = owner ? owner->CommanderUnit() : nullptr;
@@ -1724,6 +1748,13 @@ float Landscape::CheckUnderLand(Vector3Par beg, Vector3Par dir, float tMin, floa
 float Landscape::Visible(Vector3Par from, Vector3Par to, float toRadius, const Object* skip1, const Object* target,
                          ObjIntersect isect) const
 {
+    // LLM project fix (5 November 2026): no walk through the map from or to a point that is not a finite
+    // number; the second walk below has no step limit.
+    if (!LlmFinite(from.X()) || !LlmFinite(from.Y()) || !LlmFinite(from.Z()) ||
+        !LlmFinite(to.X()) || !LlmFinite(to.Y()) || !LlmFinite(to.Z()))
+    {
+        return 0;
+    }
 #if DIAG
     LOG_DEBUG(Physics, "***From {} to {}, type {}", skip1 ? (const char*)skip1->GetDebugName() : "<null>",
               target ? (const char*)target->GetDebugName() : "<null>", isect);
